@@ -9,6 +9,26 @@ const { deliverOrder } = require('../handlers/paymentConfirm');
 const db = require('../database');
 const mockNatcashRouter = require('./mockNatcashService');
 
+const { execSync } = require('child_process');
+
+function ensureDemoDatabase(demoDbPath) {
+    if (!fs.existsSync(demoDbPath)) {
+        console.log('⚠️ Natcom Demo DB not found. Attempting to generate...');
+        try {
+            const dataDir = path.dirname(demoDbPath);
+            if (!fs.existsSync(dataDir)) {
+                fs.mkdirSync(dataDir, { recursive: true });
+            }
+            const scriptPath = path.join(__dirname, '..', 'utils', 'generate_natcom_data.js');
+            console.log(`Running: node "${scriptPath}"`);
+            execSync(`node "${scriptPath}"`, { stdio: 'inherit' });
+            console.log('✅ Natcom Demo DB generated successfully!');
+        } catch (err) {
+            console.error('❌ Failed to generate Natcom Demo DB:', err.message);
+        }
+    }
+}
+
 function startWebhookServer(bot) {
     const app = express();
     app.use(express.json());
@@ -19,6 +39,7 @@ function startWebhookServer(bot) {
 
     // Connect to Natcom Demo DB
     const demoDbPath = path.join(__dirname, '..', '..', 'data', 'natcom_dashboard_demo.db');
+    ensureDemoDatabase(demoDbPath);
     let demoDb;
     try {
         demoDb = new Database(demoDbPath, { readonly: true });

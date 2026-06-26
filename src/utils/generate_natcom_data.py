@@ -1,9 +1,16 @@
 import os
+import sys
 import sqlite3
 import csv
 import random
 import uuid
 from datetime import datetime, timedelta
+
+# Force stdout/stderr to use UTF-8 encoding to prevent console Unicode errors
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 
 # Cấu hình đường dẫn
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
