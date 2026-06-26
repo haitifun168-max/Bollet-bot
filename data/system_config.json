@@ -1,0 +1,11 @@
+{
+  "prize_pool_pct": 62,
+  "commission_l1_pct": 3,
+  "commission_l2_debutan_pct": 88,
+  "commission_l2_machann_pct": 99,
+  "commission_l2_granmet_pct": 1010,
+  "commission_l2_chanpyon_pct": 1111,
+  "referral_pct": 2,
+  "marketing_pct": 2,
+  "scratch_card_win_prob": 30
+}
