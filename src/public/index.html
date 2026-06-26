@@ -5,15 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NATCOM NatLoto | CEO Dashboard</title>
     <meta name="description" content="Cockpit quản trị hệ thống đại lý số hóa Borlette tại Haiti - NATCOM NatLoto 2026">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Font Stack: Plus Jakarta Sans (Headers/Accents) & Inter (UI/Numbers/Data). Supports 100% sharp Vietnamese characters. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Outfit', 'sans-serif'] } } } }
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'] } } } }
     </script>
     <style>
-        body { background: radial-gradient(ellipse at 20% 20%, #1a0e3d 0%, #080710 60%); color: #f3f4f6; min-height: 100vh; overflow-x: hidden; font-family: 'Outfit', sans-serif; }
+        body { background: radial-gradient(ellipse at 20% 20%, #1a0e3d 0%, #080710 60%); color: #f3f4f6; min-height: 100vh; overflow-x: hidden; font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,255,136,0.4); } 70% { box-shadow: 0 0 0 8px rgba(0,255,136,0); } 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0); } }
         .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 8px 32px rgba(0,0,0,0.4); border-radius: 1rem; transition: all 0.3s ease; animation: fadeIn 0.5s ease; }
@@ -53,12 +56,54 @@
         input[type="range"] { height:4px; cursor:pointer; }
         input[type="number"] { appearance:textfield; -moz-appearance:textfield; }
         input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+        .shake { animation: shake 0.4s ease-in-out; }
     </style>
 </head>
 <body class="p-4 md:p-6 lg:p-8 custom-scrollbar">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div id="map-tooltip" class="map-tooltip text-xs text-gray-200"></div>
+
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-[#080710]/95 backdrop-blur-xl transition-all duration-500">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        
+        <div class="glass-card p-8 w-full max-w-md border border-white/10 flex flex-col items-center relative z-10 mx-4" id="login-card">
+            <div class="bg-gradient-to-br from-[#00f0ff] to-[#0080ff] p-4 rounded-2xl shadow-[0_0_32px_rgba(0,240,255,0.35)] mb-5">
+                <i class="fa-solid fa-lock text-black text-3xl animate-bounce"></i>
+            </div>
+            
+            <h2 class="text-2xl font-black tracking-tight text-white text-center">NATCOM <span class="neon-cyan">NatLoto</span></h2>
+            <p class="text-xs text-gray-500 font-semibold mt-1 mb-6 uppercase tracking-wider">CEO Cockpit &middot; Admin Login</p>
+            
+            <form onsubmit="handleLoginSubmit(event)" class="w-full space-y-4">
+                <div>
+                    <label class="block text-[10px] text-gray-400 font-black uppercase tracking-wider mb-2">Mật khẩu truy cập</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 pointer-events-none"><i class="fa-solid fa-key text-xs"></i></span>
+                        <input type="password" id="login-password" required class="bg-white/5 border border-white/10 rounded-xl py-3 pl-9 pr-10 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#00f0ff]/50 w-full transition" placeholder="Nhập mật khẩu admin...">
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-300">
+                            <i id="password-toggle-icon" class="fa-solid fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="login-error-msg" class="hidden text-xs text-rose-500 font-bold bg-rose-500/5 border border-rose-500/10 rounded-lg p-2 text-center flex items-center justify-center gap-1.5 animate-pulse">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span id="login-error-text">Sai mật khẩu truy cập!</span>
+                </div>
+                
+                <button type="submit" id="btn-login-submit" class="w-full bg-[#00f0ff] hover:bg-[#00d0e0] text-black font-extrabold text-sm py-3 rounded-xl transition shadow-[0_0_24px_rgba(0,240,255,0.25)] flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Đăng nhập</span>
+                </button>
+            </form>
+            
+            <p class="text-[9px] text-gray-600 mt-6 uppercase tracking-widest">&copy; 2026 NATCOM S.A. &middot; Digital Security</p>
+        </div>
+    </div>
 
     <div class="max-w-screen-2xl mx-auto relative z-10">
 
@@ -87,6 +132,10 @@
                     <i class="fa-solid fa-file-arrow-down"></i>
                     <span class="hidden sm:inline">Tải báo cáo CSV</span>
                 </button>
+                <button onclick="logout()" class="flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold text-xs py-2 px-4 rounded-xl transition">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span class="hidden sm:inline">Đăng xuất</span>
+                </button>
                 <div class="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1 text-xs font-semibold">
                     <button onclick="switchTab('tab-overview')" id="btn-tab-overview" class="tab-btn active px-3 py-2 rounded-lg border border-transparent transition whitespace-nowrap">
                         <i class="fa-solid fa-chart-pie mr-1.5"></i>Tổng quan
@@ -96,6 +145,9 @@
                     </button>
                     <button onclick="switchTab('tab-agents')" id="btn-tab-agents" class="tab-btn px-3 py-2 rounded-lg border border-transparent transition whitespace-nowrap">
                         <i class="fa-solid fa-users mr-1.5"></i>Đối tượng
+                    </button>
+                    <button onclick="switchTab('tab-system')" id="btn-tab-system" class="tab-btn px-3 py-2 rounded-lg border border-transparent transition whitespace-nowrap">
+                        <i class="fa-solid fa-circle-info mr-1.5"></i>Hệ thống
                     </button>
                 </div>
             </div>
@@ -246,7 +298,7 @@
                                 <circle cx="83.4" cy="73.8" r="0.9" fill="white" fill-opacity="0.6" pointer-events="none"/>
                                 <!-- Label -->
                                 <rect x="73.5" y="77.2" width="19.8" height="3.5" rx="0.8" fill="rgba(0,0,0,0.65)"/>
-                                <text x="83.4" y="79.8" fill="#e2e8f0" font-size="2.2" font-weight="700" text-anchor="middle" font-family="Outfit, sans-serif" pointer-events="none">Port-au-Prince</text>
+                                <text x="83.4" y="79.8" fill="#e2e8f0" font-size="2.2" font-weight="700" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Inter', sans-serif" pointer-events="none">Port-au-Prince</text>
 
                                 <!-- ═══ CAP-HAÏTIEN (GREEN) lon=72.20 lat=19.75 ═══ -->
                                 <circle cx="79.0" cy="16.7" r="2.8" fill="none" stroke="#00ff88" stroke-width="0.45" stroke-opacity="0.8">
@@ -261,7 +313,7 @@
                                 <circle cx="79.0" cy="16.7" r="0.7" fill="white" fill-opacity="0.55" pointer-events="none"/>
                                 <!-- Label -->
                                 <rect x="71.5" y="19.5" width="15" height="3.2" rx="0.8" fill="rgba(0,0,0,0.65)"/>
-                                <text x="79.0" y="21.8" fill="#e2e8f0" font-size="2.0" font-weight="700" text-anchor="middle" font-family="Outfit, sans-serif" pointer-events="none">Cap-Haïtien</text>
+                                <text x="79.0" y="21.8" fill="#e2e8f0" font-size="2.0" font-weight="700" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Inter', sans-serif" pointer-events="none">Cap-Haïtien</text>
 
                                 <!-- ═══ GONAÏVES (GOLD) lon=72.68 lat=19.45 ═══ -->
                                 <circle cx="62.8" cy="30.5" r="2.6" fill="none" stroke="#ffd700" stroke-width="0.45" stroke-opacity="0.8">
@@ -276,7 +328,7 @@
                                 <circle cx="62.8" cy="30.5" r="0.7" fill="white" fill-opacity="0.5" pointer-events="none"/>
                                 <!-- Label -->
                                 <rect x="55.5" y="33.2" width="14.6" height="3.2" rx="0.8" fill="rgba(0,0,0,0.65)"/>
-                                <text x="62.8" y="35.5" fill="#e2e8f0" font-size="2.0" font-weight="700" text-anchor="middle" font-family="Outfit, sans-serif" pointer-events="none">Gonaïves</text>
+                                <text x="62.8" y="35.5" fill="#e2e8f0" font-size="2.0" font-weight="700" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Inter', sans-serif" pointer-events="none">Gonaïves</text>
 
                                 <!-- ═══ LES CAYES (MAGENTA) lon=73.75 lat=18.20 ═══ -->
                                 <circle cx="46.6" cy="90.5" r="2.5" fill="none" stroke="#ff007f" stroke-width="0.45" stroke-opacity="0.8">
@@ -291,7 +343,7 @@
                                 <circle cx="46.6" cy="90.5" r="0.6" fill="white" fill-opacity="0.50" pointer-events="none"/>
                                 <!-- Label -->
                                 <rect x="39.5" y="93.0" width="14.2" height="3.2" rx="0.8" fill="rgba(0,0,0,0.65)"/>
-                                <text x="46.6" y="95.3" fill="#e2e8f0" font-size="2.0" font-weight="700" text-anchor="middle" font-family="Outfit, sans-serif" pointer-events="none">Les Cayes</text>
+                                <text x="46.6" y="95.3" fill="#e2e8f0" font-size="2.0" font-weight="700" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Inter', sans-serif" pointer-events="none">Les Cayes</text>
 
                                 <!-- ═══ PORT-DE-PAIX (PURPLE) lon=72.84 lat=19.93 ═══ -->
                                 <circle cx="57.2" cy="8.0" r="2.5" fill="none" stroke="#a855f7" stroke-width="0.45" stroke-opacity="0.8">
@@ -306,7 +358,7 @@
                                 <circle cx="57.2" cy="8.0" r="0.6" fill="white" fill-opacity="0.48" pointer-events="none"/>
                                 <!-- Label -->
                                 <rect x="50.0" y="11.0" width="14.4" height="3.2" rx="0.8" fill="rgba(0,0,0,0.65)"/>
-                                <text x="57.2" y="13.3" fill="#e2e8f0" font-size="2.0" font-weight="700" text-anchor="middle" font-family="Outfit, sans-serif" pointer-events="none">Port-de-Paix</text>
+                                <text x="57.2" y="13.3" fill="#e2e8f0" font-size="2.0" font-weight="700" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Inter', sans-serif" pointer-events="none">Port-de-Paix</text>
 
                                 <!-- ═══ COMPASS ROSE ═══ -->
                                 <g transform="translate(93.5, 93)">
@@ -315,7 +367,7 @@
                                     <polygon points="0,3 0.7,1.2 0,1.8 -0.7,1.2" fill="rgba(26,58,92,0.5)"/>
                                     <polygon points="-3,0 -1.2,-0.7 -1.8,0 -1.2,0.7" fill="rgba(26,58,92,0.5)"/>
                                     <polygon points="3,0 1.2,-0.7 1.8,0 1.2,0.7" fill="rgba(26,58,92,0.5)"/>
-                                    <text x="0" y="-4.2" fill="#1a3a5c" font-size="2" font-weight="900" text-anchor="middle" font-family="Outfit">N</text>
+                                    <text x="0" y="-4.2" fill="#1a3a5c" font-size="2" font-weight="900" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Inter', sans-serif">N</text>
                                 </g>
                             </svg>
                         </div>
@@ -645,6 +697,243 @@
             </div>
         </div><!-- /tab-agents -->
 
+        <!-- TAB 4: SYSTEM BLUEPRINT -->
+        <div id="tab-system" class="tab-content hidden space-y-6">
+            <!-- Section 1: Actors & Incentives -->
+            <section class="glass-card p-6">
+                <div class="mb-5">
+                    <h2 class="text-xl font-black text-gray-100 flex items-center gap-2"><i class="fa-solid fa-circle-nodes text-[#00f0ff]"></i>Đối tượng &amp; Cơ chế khuyến khích (Actors &amp; Incentives)</h2>
+                    <p class="text-xs text-gray-400 mt-1">Vai trò, nhiệm vụ chính và cơ chế hưởng hoa hồng của các nhân sự trong hệ thống Natloto</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- ADMIN CARD -->
+                    <div class="bg-gradient-to-b from-[#00f0ff]/5 to-transparent border border-[#00f0ff]/10 hover:border-[#00f0ff]/30 rounded-xl p-5 flex flex-col justify-between transition duration-300 relative group overflow-hidden">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-[#00f0ff]/2 rounded-full blur-xl group-hover:bg-[#00f0ff]/5 transition-all duration-300"></div>
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-[#00f0ff]/10 text-[#00f0ff]">Admin / CEO</span>
+                                <i class="fa-solid fa-dice-d6 text-xl text-[#00f0ff] animate-pulse"></i>
+                            </div>
+                            <h3 class="font-extrabold text-white text-base mb-3">Ban điều hành NATCOM</h3>
+                            <ul class="space-y-2 text-xs text-gray-400">
+                                <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-[#00f0ff] mt-0.5 text-[8px]"></i><span><b>Nhiệm vụ:</b> Thiết lập chính sách tỷ lệ thưởng, hoa hồng, quản trị ví và đối soát cuối kỳ.</span></li>
+                                <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-[#00f0ff] mt-0.5 text-[8px]"></i><span><b>Hành động:</b> Cấu hình hệ thống qua CEO Dashboard, theo dõi luồng doanh thu vùng.</span></li>
+                            </ul>
+                        </div>
+                        <div class="mt-5 pt-3 border-t border-white/5">
+                            <span class="text-[10px] text-gray-500 uppercase font-black block tracking-wider">Hưởng lợi ích</span>
+                            <span class="text-sm font-black text-[#00f0ff] block mt-0.5">House Edge: ~40% Doanh số</span>
+                        </div>
+                    </div>
+
+                    <!-- SUPER AGENT CARD -->
+                    <div class="bg-gradient-to-b from-[#ffd700]/5 to-transparent border border-[#ffd700]/10 hover:border-[#ffd700]/30 rounded-xl p-5 flex flex-col justify-between transition duration-300 relative group overflow-hidden">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-[#ffd700]/2 rounded-full blur-xl group-hover:bg-[#ffd700]/5 transition-all duration-300"></div>
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-[#ffd700]/10 text-[#ffd700]">Super Agent (L1)</span>
+                                <i class="fa-solid fa-network-wired text-xl text-[#ffd700]"></i>
+                            </div>
+                            <h3 class="font-extrabold text-white text-base mb-3">Nhà phân phối Vùng</h3>
+                            <ul class="space-y-2 text-xs text-gray-400">
+                                <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-[#ffd700] mt-0.5 text-[8px]"></i><span><b>Nhiệm vụ:</b> Phát triển mạng lưới đại lý Marchann (L2) tại các vùng địa lý của Haiti.</span></li>
+                                <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-[#ffd700] mt-0.5 text-[8px]"></i><span><b>Hành động:</b> Cấp thanh khoản tiền mặt, nạp/rút số dư ví cho các bốt Marchann.</span></li>
+                            </ul>
+                        </div>
+                        <div class="mt-5 pt-3 border-t border-white/5">
+                            <span class="text-[10px] text-gray-500 uppercase font-black block tracking-wider">Hưởng lợi ích</span>
+                            <span class="text-sm font-black text-[#ffd700] block mt-0.5">3.0% Doanh số vùng bán ra</span>
+                        </div>
+                    </div>
+
+                    <!-- MARCHANN CARD -->
+                    <div class="bg-gradient-to-b from-[#00ff88]/5 to-transparent border border-[#00ff88]/10 hover:border-[#00ff88]/30 rounded-xl p-5 flex flex-col justify-between transition duration-300 relative group overflow-hidden">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-[#00ff88]/2 rounded-full blur-xl group-hover:bg-[#00ff88]/5 transition-all duration-300"></div>
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-[#00ff88]/10 text-[#00ff88]">Marchann (L2)</span>
+                                <i class="fa-solid fa-store text-xl text-[#00ff88]"></i>
+                            </div>
+                            <h3 class="font-extrabold text-white text-base mb-3">Đại lý / Bốt bán vé lẻ</h3>
+                            <ul class="space-y-2 text-xs text-gray-400">
+                                <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-[#00ff88] mt-0.5 text-[8px]"></i><span><b>Nhiệm vụ:</b> Tiếp cận cộng đồng dân cư trực tiếp, bán vé Borlette số hóa qua chatbot.</span></li>
+                                <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-[#00ff88] mt-0.5 text-[8px]"></i><span><b>Hành động:</b> Nhập số cược cho khách, rút tiền mặt thưởng cược cho người chơi tại quầy.</span></li>
+                            </ul>
+                        </div>
+                        <div class="mt-5 pt-3 border-t border-white/5">
+                            <span class="text-[10px] text-gray-500 uppercase font-black block tracking-wider">Hưởng lợi ích</span>
+                            <span class="text-sm font-black text-[#00ff88] block mt-0.5">Hoa hồng lũy tiến: 8% – 11%</span>
+                        </div>
+                    </div>
+
+                    <!-- CLIENT CARD -->
+                    <div class="bg-gradient-to-b from-[#ff007f]/5 to-transparent border border-[#ff007f]/10 hover:border-[#ff007f]/30 rounded-xl p-5 flex flex-col justify-between transition duration-300 relative group overflow-hidden">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-[#ff007f]/2 rounded-full blur-xl group-hover:bg-[#ff007f]/5 transition-all duration-300"></div>
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-[#ff007f]/10 text-[#ff007f]">Người chơi / Client</span>
+                                <i class="fa-solid fa-ticket-simple text-xl text-[#ff007f]"></i>
+                            </div>
+                            <h3 class="font-extrabold text-white text-base mb-3">Khách hàng cuối cùng</h3>
+                            <ul class="space-y-2 text-xs text-gray-400">
+                                <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-[#ff007f] mt-0.5 text-[8px]"></i><span><b>Nhiệm vụ:</b> Nạp tiền ví, tham gia mua vé số Borlette số hóa.</span></li>
+                                <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-[#ff007f] mt-0.5 text-[8px]"></i><span><b>Hành động:</b> Đăng ký qua link giới thiệu, mua vé, cào thẻ trúng thưởng.</span></li>
+                            </ul>
+                        </div>
+                        <div class="mt-5 pt-3 border-t border-white/5">
+                            <span class="text-[10px] text-gray-500 uppercase font-black block tracking-wider">Hưởng lợi ích</span>
+                            <span class="text-sm font-black text-[#ff007f] block mt-0.5">Trúng giải + 2% Doanh số F1</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Hierarchy Flow Diagram -->
+            <section class="glass-card p-6">
+                <div class="mb-5">
+                    <h2 class="text-xl font-black text-gray-100 flex items-center gap-2"><i class="fa-solid fa-sitemap text-[#ffd700]"></i>Sơ đồ phân cấp dòng tiền &amp; Hoa hồng (Hierarchy Flow)</h2>
+                    <p class="text-xs text-gray-400 mt-1">Cách dòng tiền mặt/Natcash đi lên và phân phối hoa hồng đa cấp đi xuống trong mạng lưới đại lý Natloto</p>
+                </div>
+                
+                <div class="flex flex-col lg:flex-row items-stretch justify-between gap-4 p-4 bg-black/25 rounded-2xl border border-white/5 relative">
+                    <!-- NODE 1: ADMIN -->
+                    <div class="flex-1 bg-white/4 border border-[#00f0ff]/20 rounded-xl p-4 text-center hover:bg-white/8 transition duration-300 flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-full bg-[#00f0ff]/10 flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-shield-halved text-[#00f0ff] text-xl"></i></div>
+                            <h4 class="font-extrabold text-white text-sm">Hệ thống NATCOM</h4>
+                            <p class="text-[11px] text-gray-500 mt-1">Cơ quan chủ quản &amp; Thiết lập chính sách cược</p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-white/5">
+                            <span class="text-[10px] text-emerald-400 font-bold block"><i class="fa-solid fa-circle-down mr-1"></i>Chuyển hạn mức số dư</span>
+                            <span class="text-[10px] text-cyan-400 font-bold block mt-1"><i class="fa-solid fa-gears mr-1"></i>Đối soát tự động</span>
+                        </div>
+                    </div>
+
+                    <!-- Flow Arrow 1 -->
+                    <div class="flex lg:flex-col items-center justify-center gap-2 text-cyan-500 flex-shrink-0">
+                        <i class="fa-solid fa-arrow-right lg:rotate-0 rotate-90 text-xl animate-pulse"></i>
+                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest lg:rotate-0 rotate-90">Cấp quỹ</span>
+                    </div>
+
+                    <!-- NODE 2: SUPER AGENT -->
+                    <div class="flex-1 bg-white/4 border border-[#ffd700]/20 rounded-xl p-4 text-center hover:bg-white/8 transition duration-300 flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-full bg-[#ffd700]/10 flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-network-wired text-[#ffd700] text-xl"></i></div>
+                            <h4 class="font-extrabold text-white text-sm">Super Agent (L1)</h4>
+                            <p class="text-[11px] text-gray-500 mt-1">Quản lý cấp Vùng tại Haiti (5 Vùng)</p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-white/5">
+                            <span class="text-[10px] text-[#ffd700] font-black block"><i class="fa-solid fa-percent mr-1"></i>Nhận 3.0% Hoa hồng cố định</span>
+                            <span class="text-[10px] text-emerald-400 font-bold block mt-1"><i class="fa-solid fa-money-bill-transfer mr-1"></i>Trung chuyển dòng tiền</span>
+                        </div>
+                    </div>
+
+                    <!-- Flow Arrow 2 -->
+                    <div class="flex lg:flex-col items-center justify-center gap-2 text-yellow-500 flex-shrink-0">
+                        <i class="fa-solid fa-arrow-right lg:rotate-0 rotate-90 text-xl animate-pulse"></i>
+                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest lg:rotate-0 rotate-90">Hỗ trợ</span>
+                    </div>
+
+                    <!-- NODE 3: MARCHANN -->
+                    <div class="flex-1 bg-white/4 border border-[#00ff88]/20 rounded-xl p-4 text-center hover:bg-white/8 transition duration-300 flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-full bg-[#00ff88]/10 flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-shop text-[#00ff88] text-xl"></i></div>
+                            <h4 class="font-extrabold text-white text-sm">Marchann L2 (Đại lý)</h4>
+                            <p class="text-[11px] text-gray-500 mt-1">100 bốt bán lẻ hoạt động tại địa bàn</p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-white/5">
+                            <span class="text-[10px] text-[#00ff88] font-black block"><i class="fa-solid fa-coins mr-1"></i>Nhận 8% - 11% Lũy tiến</span>
+                            <span class="text-[10px] text-pink-400 font-bold block mt-1"><i class="fa-solid fa-gift mr-1"></i>Trả thưởng cược / Instant Cash</span>
+                        </div>
+                    </div>
+
+                    <!-- Flow Arrow 3 -->
+                    <div class="flex lg:flex-col items-center justify-center gap-2 text-emerald-500 flex-shrink-0">
+                        <i class="fa-solid fa-arrow-right lg:rotate-0 rotate-90 text-xl animate-pulse"></i>
+                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest lg:rotate-0 rotate-90">Bán vé</span>
+                    </div>
+
+                    <!-- NODE 4: CLIENT -->
+                    <div class="flex-1 bg-white/4 border border-[#ff007f]/20 rounded-xl p-4 text-center hover:bg-white/8 transition duration-300 flex flex-col justify-between">
+                        <div>
+                            <div class="w-12 h-12 rounded-full bg-[#ff007f]/10 flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-user-tag text-[#ff007f] text-xl"></i></div>
+                            <h4 class="font-extrabold text-white text-sm">Khách hàng cuối</h4>
+                            <p class="text-[11px] text-gray-500 mt-1">Đăng ký &amp; mua vé số tự phục vụ qua Bot</p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-white/5">
+                            <span class="text-[10px] text-emerald-400 font-bold block"><i class="fa-solid fa-arrow-up mr-1"></i>Nạp tiền Natcash cược</span>
+                            <span class="text-[10px] text-purple-400 font-bold block mt-1"><i class="fa-solid fa-share-nodes mr-1"></i>Nhận 2% Hoa hồng giới thiệu</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Channel Matrix Table -->
+            <section class="glass-card p-6">
+                <div class="mb-5">
+                    <h2 class="text-xl font-black text-gray-100 flex items-center gap-2"><i class="fa-solid fa-table-list text-[#ff007f]"></i>Ma trận tính năng theo Kênh (Channel Matrix)</h2>
+                    <p class="text-xs text-gray-400 mt-1">Phân bổ chi tiết các tính năng nghiệp vụ được tích hợp trên Chatbot Telegram (Front-end đại lý &amp; Khách) và Web Portal (Quản trị Admin &amp; L1)</p>
+                </div>
+
+                <div class="overflow-x-auto custom-scrollbar rounded-xl border border-white/5 bg-black/20">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-white/3 border-b border-gray-800 text-[10px] text-gray-500 uppercase tracking-widest font-black">
+                                <th class="py-3 px-4 w-2/5">Tính năng / Nghiệp vụ hệ thống</th>
+                                <th class="py-3 px-4 w-3/10"><i class="fa-brands fa-telegram text-[#00f0ff] mr-1.5 text-xs"></i>Telegram Chatbot 🤖</th>
+                                <th class="py-3 px-4 w-3/10"><i class="fa-solid fa-globe text-[#ffd700] mr-1.5 text-xs"></i>Web Dashboard 🌐</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-xs md:text-sm text-gray-300 divide-y divide-gray-800/30">
+                            <!-- Row 1 -->
+                            <tr class="hover:bg-white/1 transition duration-200">
+                                <td class="py-3 px-4 font-bold text-white">Mua vé &amp; Ghi số Borlette số hóa</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"><i class="fa-solid fa-circle-check mr-1"></i>Hỗ trợ cược cự ly</span></td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-500/10 text-gray-500 border border-gray-500/20"><i class="fa-solid fa-circle-xmark mr-1"></i>Chỉ xem báo cáo cược</span></td>
+                            </tr>
+                            <!-- Row 2 -->
+                            <tr class="hover:bg-white/1 transition duration-200">
+                                <td class="py-3 px-4 font-bold text-white">Nạp tiền cược tự động (Natcash/Sepay)</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"><i class="fa-solid fa-circle-check mr-1"></i>Nạp tức thì qua ví điện tử</span></td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-500/10 text-gray-500 border border-gray-500/20"><i class="fa-solid fa-circle-xmark mr-1"></i>Không hỗ trợ</span></td>
+                            </tr>
+                            <!-- Row 3 -->
+                            <tr class="hover:bg-white/1 transition duration-200">
+                                <td class="py-3 px-4 font-bold text-white">Rút hoa hồng tích lũy</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"><i class="fa-solid fa-circle-check mr-1"></i>Dùng lệnh /komisyon rút tức thì</span></td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-500/10 text-gray-500 border border-gray-500/20"><i class="fa-solid fa-circle-xmark mr-1"></i>Chỉ phân tích số liệu</span></td>
+                            </tr>
+                            <!-- Row 4 -->
+                            <tr class="hover:bg-white/1 transition duration-200">
+                                <td class="py-3 px-4 font-bold text-white">Game Thưởng tức thì (Scratch Card, Streak)</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"><i class="fa-solid fa-circle-check mr-1"></i>Chơi game cào, điểm danh bot</span></td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-500/10 text-gray-500 border border-gray-500/20"><i class="fa-solid fa-circle-xmark mr-1"></i>Không hỗ trợ</span></td>
+                            </tr>
+                            <!-- Row 5 -->
+                            <tr class="hover:bg-white/1 transition duration-200">
+                                <td class="py-3 px-4 font-bold text-white">Cấu hình tham số chính sách (Prize pool, L1, L2, Giờ vàng)</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-500/10 text-gray-500 border border-gray-500/20"><i class="fa-solid fa-circle-xmark mr-1"></i>Không hỗ trợ</span></td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/10 text-[#00f0ff] border border-cyan-500/20"><i class="fa-solid fa-circle-check mr-1"></i>Admin điều khiển qua sliders</span></td>
+                            </tr>
+                            <!-- Row 6 -->
+                            <tr class="hover:bg-white/1 transition duration-200">
+                                <td class="py-3 px-4 font-bold text-white">Theo dõi bản đồ nhiệt &amp; Vùng phủ sóng</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-500/10 text-gray-500 border border-gray-500/20"><i class="fa-solid fa-circle-xmark mr-1"></i>Không hỗ trợ</span></td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/10 text-[#00f0ff] border border-cyan-500/20"><i class="fa-solid fa-circle-check mr-1"></i>Bản đồ tương tác SVG</span></td>
+                            </tr>
+                            <!-- Row 7 -->
+                            <tr class="hover:bg-white/1 transition duration-200">
+                                <td class="py-3 px-4 font-bold text-white">Xem danh sách &amp; Quản trị Marchann</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-500/10 text-gray-500 border border-gray-500/20"><i class="fa-solid fa-circle-xmark mr-1"></i>Không hỗ trợ</span></td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/10 text-[#00f0ff] border border-cyan-500/20"><i class="fa-solid fa-circle-check mr-1"></i>Admin lọc theo Tier/Khu vực</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div><!-- /tab-system -->
+
         <footer class="text-center text-[10px] text-gray-600 py-6 mt-6 border-t border-white/5">
             &copy; 2026 NATCOM S.A. &middot; Digital Agent Project &middot; Powered by Natloto MLM Engine v2.0 &middot; Haiti 🇭🇹
         </footer>
@@ -655,11 +944,97 @@
         let regionalData = {};
         let gameChartInst = null, rewardsChartInst = null, trendsChartInst = null;
 
+        // Set Chart.js global defaults to match our premium font stack
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.font.family = "'Plus Jakarta Sans', 'Inter', sans-serif";
+        }
+
+        async function authedFetch(url, options = {}) {
+            const pwd = localStorage.getItem('admin_password') || '';
+            options.headers = options.headers || {};
+            options.headers['Authorization'] = `Bearer ${pwd}`;
+            if (options.method && options.method !== 'GET') {
+                options.headers['Content-Type'] = options.headers['Content-Type'] || 'application/json';
+            }
+            const res = await fetch(url, options);
+            if (res.status === 401 && !url.includes('/api/natcom/login')) {
+                logout();
+                throw new Error('Unauthorized');
+            }
+            return res;
+        }
+
+        function showLoginOverlay() {
+            const overlay = document.getElementById('login-overlay');
+            overlay.classList.remove('hidden');
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-error-msg').classList.add('hidden');
+        }
+
+        function togglePasswordVisibility() {
+            const pin = document.getElementById('login-password');
+            const icon = document.getElementById('password-toggle-icon');
+            if (pin.type === 'password') {
+                pin.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                pin.type = 'text'; // wait, toggle it back
+                pin.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        async function handleLoginSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-login-submit');
+            const err = document.getElementById('login-error-msg');
+            const card = document.getElementById('login-card');
+            const pwd = document.getElementById('login-password').value;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...';
+            err.classList.add('hidden');
+            card.classList.remove('shake');
+            
+            try {
+                const res = await fetch('/api/natcom/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                
+                if (res.ok) {
+                    localStorage.setItem('admin_password', pwd);
+                    document.getElementById('login-overlay').classList.add('hidden');
+                    fetchDashboardData();
+                } else {
+                    const data = await res.json();
+                    document.getElementById('login-error-text').innerText = data.error || 'Sai mật khẩu!';
+                    err.classList.remove('hidden');
+                    setTimeout(() => card.classList.add('shake'), 50);
+                }
+            } catch (errVal) {
+                document.getElementById('login-error-text').innerText = 'Lỗi kết nối máy chủ!';
+                err.classList.remove('hidden');
+                setTimeout(() => card.classList.add('shake'), 50);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> <span>Đăng nhập</span>';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('admin_password');
+            showLoginOverlay();
+        }
+
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            const btnMap = {'tab-overview':'btn-tab-overview','tab-policy':'btn-tab-policy','tab-agents':'btn-tab-agents'};
+            const btnMap = {'tab-overview':'btn-tab-overview','tab-policy':'btn-tab-policy','tab-agents':'btn-tab-agents','tab-system':'btn-tab-system'};
             if (btnMap[tabId]) document.getElementById(btnMap[tabId]).classList.add('active');
             if (tabId === 'tab-policy') loadPolicyConfig();
             if (tabId === 'tab-agents') loadAgentsList();
@@ -667,6 +1042,7 @@
 
         function fmtHTG(v) { if(v===null||v===undefined||isNaN(v))return'—'; return new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(v)+' HTG'; }
         function fmtShort(v) { if(v>=1e6)return(v/1e6).toFixed(1)+'M'; if(v>=1e3)return(v/1e3).toFixed(0)+'k'; return Math.round(v)+''; }
+        function setInner(id, v) { const el=document.getElementById(id); if(el) el.innerText=v; }
 
         function showMapTooltip(event, region) {
             const tip = document.getElementById('map-tooltip');
@@ -713,7 +1089,7 @@
 
         async function loadPolicyConfig() {
             try {
-                const res = await fetch('/api/natcom/config');
+                const res = await authedFetch('/api/natcom/config');
                 if(!res.ok) return;
                 const cfg = await res.json();
                 const sr=(id,v,lId,sfx='%')=>{const e=document.getElementById(id),l=document.getElementById(lId);if(e)e.value=v;if(l)l.innerText=v+sfx;};
@@ -749,7 +1125,7 @@
                     streak_bonus_days: parseInt(document.getElementById('cfg-streak-days').value),
                     auto_payout: document.getElementById('cfg-auto-payout').checked
                 };
-                const res=await fetch('/api/natcom/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+                const res=await authedFetch('/api/natcom/config',{method:'POST',body:JSON.stringify(body)});
                 const d=await res.json();
                 if(d.success){
                     st.classList.remove('hidden'); st.classList.add('flex');
@@ -770,7 +1146,7 @@
                 const tier=tierEl?tierEl.value:'';
                 let url=`/api/natcom/agents-list?search=${encodeURIComponent(search)}&region=${encodeURIComponent(region)}`;
                 if(tier) url+=`&tier=${encodeURIComponent(tier)}`;
-                const res=await fetch(url);
+                const res=await authedFetch(url);
                 const agents=await res.json();
                 const lbl=document.getElementById('agents-count-label'); if(lbl) lbl.innerText=`Hiển thị ${agents.length} đại lý`;
                 const tc={CHANPYON:{label:'Chanpyon',css:'bg-purple-500/10 text-purple-300 border border-purple-500/20',icon:'⭐'},GRAN_MET:{label:'Gran Mèt',css:'bg-blue-500/10 text-blue-300 border border-blue-500/20',icon:'👑'},MACHANN:{label:'Machann',css:'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20',icon:'🏪'},DEBUTAN:{label:'Debutan',css:'bg-gray-500/10 text-gray-400 border border-gray-500/20',icon:'🌱'}};
@@ -809,20 +1185,23 @@
         async function fetchDashboardData() {
             try {
                 const [kpisR,trendsR,gamesR,regionsR,rewardsR,topR] = await Promise.all([
-                    fetch('/api/natcom/kpis'),fetch('/api/natcom/monthly-trends'),fetch('/api/natcom/game-breakdown'),
-                    fetch('/api/natcom/regional-breakdown'),fetch('/api/natcom/rewards-details'),fetch('/api/natcom/top-agents')
+                    authedFetch('/api/natcom/kpis'),authedFetch('/api/natcom/monthly-trends'),authedFetch('/api/natcom/game-breakdown'),
+                    authedFetch('/api/natcom/regional-breakdown'),authedFetch('/api/natcom/rewards-details'),authedFetch('/api/natcom/top-agents')
                 ]);
                 const kpis=await kpisR.json(), trends=await trendsR.json(), games=await gamesR.json(),
                       regions=await regionsR.json(), rewards=await rewardsR.json(), top=await topR.json();
 
-                document.getElementById('kpi-sales').innerText=fmtHTG(kpis.totalSales);
-                document.getElementById('kpi-sales-usd').innerText='~ $'+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(kpis.totalSales/140)+' USD';
-                document.getElementById('kpi-comm-l2').innerText=fmtHTG(kpis.maComms);
-                document.getElementById('kpi-comm-l1').innerText=fmtHTG(kpis.saComms);
-                document.getElementById('kpi-rewards').innerText=fmtHTG(kpis.totalRewards);
-                document.getElementById('kpi-tickets-count').innerText=new Intl.NumberFormat('en-US').format(kpis.totalTickets);
-                document.getElementById('kpi-users-count').innerText=new Intl.NumberFormat('en-US').format(kpis.totalUsers);
-                if(kpis.totalSales>0){const p=((kpis.totalRewards/kpis.totalSales)*100).toFixed(1);document.getElementById('kpi-rewards-pct').innerText=`~${p}% doanh số`;}
+                setInner('kpi-sales', fmtHTG(kpis.totalSales));
+                setInner('kpi-sales-usd', '~ $'+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(kpis.totalSales/140)+' USD');
+                setInner('kpi-comm-l2', fmtHTG(kpis.maComms));
+                setInner('kpi-comm-l1', fmtHTG(kpis.saComms));
+                setInner('kpi-rewards', fmtHTG(kpis.totalRewards));
+                setInner('kpi-tickets-count', new Intl.NumberFormat('en-US').format(kpis.totalTickets));
+                setInner('kpi-users-count', new Intl.NumberFormat('en-US').format(kpis.totalUsers));
+                if(kpis.totalSales>0){
+                    const p=((kpis.totalRewards/kpis.totalSales)*100).toFixed(1);
+                    setInner('kpi-rewards-pct', `~${p}% doanh số`);
+                }
 
                 // Growth badge
                 if(trends.sales&&trends.sales.length>=2){
@@ -830,20 +1209,28 @@
                     if(prev>0){
                         const g=((last-prev)/prev*100).toFixed(1);
                         const el=document.getElementById('kpi-sales-growth');
-                        el.innerText=(g>=0?'+':'')+g+'%';
-                        el.className='text-[10px] font-bold px-2 py-0.5 rounded-full '+(g>=0?'growth-up':'growth-dn');
+                        if(el){
+                            el.innerText=(g>=0?'+':'')+g+'%';
+                            el.className='text-[10px] font-bold px-2 py-0.5 rounded-full '+(g>=0?'growth-up':'growth-dn');
+                        }
                     }
                 }
 
-                try{const cr=await fetch('/api/natcom/config');if(cr.ok){const cfg=await cr.json();document.getElementById('kpi-comm-l1-label').innerText=`Tỷ lệ: ${cfg.commission_l1_pct||3}.0%`;}}catch(e){}
+                try{
+                    const cr=await authedFetch('/api/natcom/config');
+                    if(cr.ok){
+                        const cfg=await cr.json();
+                        setInner('kpi-comm-l1-label', `Tỷ lệ: ${cfg.commission_l1_pct||3}.0%`);
+                    }
+                }catch(e){}
 
                 regionalData=regions; updateMapVisuals();
 
                 const tot=(rewards.scratch||0)+(rewards.streak||0)+(rewards.lucky||0);
-                document.getElementById('reward-total').innerText=fmtShort(tot)+' HTG';
-                document.getElementById('reward-scratch-val').innerText=fmtHTG(rewards.scratch);
-                document.getElementById('reward-streak-val').innerText=fmtHTG(rewards.streak);
-                document.getElementById('reward-lucky-val').innerText=fmtHTG(rewards.lucky);
+                setInner('reward-total', fmtShort(tot)+' HTG');
+                setInner('reward-scratch-val', fmtHTG(rewards.scratch));
+                setInner('reward-streak-val', fmtHTG(rewards.streak));
+                setInner('reward-lucky-val', fmtHTG(rewards.lucky));
 
                 renderMonthlyTrendsChart(trends);
                 renderGameBreakdownChart(games);
@@ -862,17 +1249,17 @@
                 {label:'Doanh số',data:d.sales,borderColor:'#00f0ff',backgroundColor:(c)=>{const g=c.chart.ctx.createLinearGradient(0,0,0,250);g.addColorStop(0,'rgba(0,240,255,0.1)');g.addColorStop(1,'rgba(0,240,255,0)');return g;},borderWidth:2.5,fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#00f0ff'},
                 {label:'Hoa hồng L2',data:d.maComms,borderColor:'#00ff88',backgroundColor:'transparent',borderWidth:2,tension:0.4,pointRadius:3,pointBackgroundColor:'#00ff88'},
                 {label:'Hoa hồng L1',data:d.saComms,borderColor:'#ffd700',backgroundColor:'transparent',borderWidth:2,tension:0.4,pointRadius:3,pointBackgroundColor:'#ffd700',borderDash:[4,3]}
-            ]},options:{...cDefs,plugins:{legend:{labels:{color:'#9ca3af',font:{family:'Outfit',size:11},boxWidth:16,padding:16}},tooltip:{backgroundColor:'rgba(10,8,24,0.95)',borderColor:'rgba(0,240,255,0.2)',borderWidth:1,callbacks:{label:c=>` ${c.dataset.label}: ${fmtHTG(c.raw)}`}}},scales:{y:{grid:{color:gC},ticks:{color:tC,font:{family:'Outfit'},callback:v=>fmtShort(v)+' HTG'}},x:{grid:{display:false},ticks:{color:tC,font:{family:'Outfit'}}}}}});
+            ]},options:{...cDefs,plugins:{legend:{labels:{color:'#9ca3af',font:{family:"'Plus Jakarta Sans', 'Inter', sans-serif",size:11},boxWidth:16,padding:16}},tooltip:{backgroundColor:'rgba(10,8,24,0.95)',borderColor:'rgba(0,240,255,0.2)',borderWidth:1,callbacks:{label:c=>` ${c.dataset.label}: ${fmtHTG(c.raw)}`}}},scales:{y:{grid:{color:gC},ticks:{color:tC,font:{family:"'Plus Jakarta Sans', 'Inter', sans-serif"},callback:v=>fmtShort(v)+' HTG'}},x:{grid:{display:false},ticks:{color:tC,font:{family:"'Plus Jakarta Sans', 'Inter', sans-serif"}}}}}});
         }
 
         function renderGameBreakdownChart(d) {
             const ctx=document.getElementById('gameBreakdownChart').getContext('2d');
             if(gameChartInst) gameChartInst.destroy();
             const total=(d.values||[]).reduce((a,b)=>a+b,0);
-            document.getElementById('game-center-total').innerText=fmtShort(total)+' HTG';
+            setInner('game-center-total', fmtShort(total)+' HTG');
             const vals=d.values||[0,0,0];
             const ids=['game-bolet-val','game-maryaj-val','game-lotto-val'];
-            vals.forEach((v,i)=>{const el=document.getElementById(ids[i]);if(el)el.innerText=fmtHTG(v);});
+            vals.forEach((v,i)=>{ setInner(ids[i], fmtHTG(v)); });
             gameChartInst=new Chart(ctx,{type:'doughnut',data:{labels:d.labels||['Bolet','Maryaj','Lotto 3'],datasets:[{data:vals,backgroundColor:['#00f0ff','#00ff88','#ff007f'],borderWidth:0,hoverOffset:6}]},options:{...cDefs,cutout:'72%',plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(10,8,24,0.95)',callbacks:{label:c=>` ${c.label}: ${fmtHTG(c.raw)}`}}}}});
         }
 
@@ -884,7 +1271,15 @@
 
         function downloadCSV() { window.open('/api/natcom/download-report'); }
 
-        window.addEventListener('DOMContentLoaded', fetchDashboardData);
+        window.addEventListener('DOMContentLoaded', () => {
+            const pwd = localStorage.getItem('admin_password');
+            if (pwd) {
+                document.getElementById('login-overlay').classList.add('hidden');
+                fetchDashboardData();
+            } else {
+                showLoginOverlay();
+            }
+        });
     </script>
 </body>
 </html>

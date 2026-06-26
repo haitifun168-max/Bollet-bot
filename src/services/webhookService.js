@@ -27,8 +27,29 @@ function startWebhookServer(bot) {
         console.log('⚠️ Could not connect to Natcom Demo DB:', e.message);
     }
 
-    // --- NATCOM DASHBOARD APIS ---
-    app.get('/api/natcom/kpis', (req, res) => {
+    // --- NATCOM DASHBOARD APIS (SECURE) ---
+
+    // Middleware to check authentication header
+    function requireAuth(req, res, next) {
+        const authHeader = req.headers['authorization'];
+        const pwd = config.DASHBOARD_PASSWORD || 'admin123';
+        if (authHeader === `Bearer ${pwd}`) {
+            return next();
+        }
+        return res.status(401).json({ error: 'Unauthorized. Invalid or missing token.' });
+    }
+
+    // Login API endpoint
+    app.post('/api/natcom/login', (req, res) => {
+        const { password } = req.body;
+        const pwd = config.DASHBOARD_PASSWORD || 'admin123';
+        if (password === pwd) {
+            return res.json({ success: true });
+        }
+        return res.status(401).json({ success: false, error: 'Sai mật khẩu truy cập!' });
+    });
+
+    app.get('/api/natcom/kpis', requireAuth, (req, res) => {
         try {
             if (!demoDb) throw new Error("Demo DB not loaded");
             const ticketCount = demoDb.prepare("SELECT COUNT(*) as count FROM tickets").get().count;
@@ -50,7 +71,7 @@ function startWebhookServer(bot) {
         }
     });
 
-    app.get('/api/natcom/monthly-trends', (req, res) => {
+    app.get('/api/natcom/monthly-trends', requireAuth, (req, res) => {
         try {
             if (!demoDb) throw new Error("Demo DB not loaded");
             const monthlySales = demoDb.prepare(`
@@ -98,7 +119,7 @@ function startWebhookServer(bot) {
         }
     });
 
-    app.get('/api/natcom/regional-breakdown', (req, res) => {
+    app.get('/api/natcom/regional-breakdown', requireAuth, (req, res) => {
         try {
             if (!demoDb) throw new Error("Demo DB not loaded");
             
@@ -145,7 +166,7 @@ function startWebhookServer(bot) {
         }
     });
 
-    app.get('/api/natcom/config', (req, res) => {
+    app.get('/api/natcom/config', requireAuth, (req, res) => {
         try {
             const configPath = path.join(__dirname, '..', '..', 'data', 'system_config.json');
             const raw = fs.readFileSync(configPath, 'utf8');
@@ -155,7 +176,7 @@ function startWebhookServer(bot) {
         }
     });
 
-    app.post('/api/natcom/config', (req, res) => {
+    app.post('/api/natcom/config', requireAuth, (req, res) => {
         try {
             const configPath = path.join(__dirname, '..', '..', 'data', 'system_config.json');
             fs.writeFileSync(configPath, JSON.stringify(req.body, null, 2), 'utf8');
@@ -165,7 +186,7 @@ function startWebhookServer(bot) {
         }
     });
 
-    app.get('/api/natcom/agents-list', (req, res) => {
+    app.get('/api/natcom/agents-list', requireAuth, (req, res) => {
         try {
             if (!demoDb) throw new Error("Demo DB not loaded");
             const search = req.query.search || '';
@@ -205,7 +226,7 @@ function startWebhookServer(bot) {
         }
     });
 
-    app.get('/api/natcom/game-breakdown', (req, res) => {
+    app.get('/api/natcom/game-breakdown', requireAuth, (req, res) => {
         try {
             if (!demoDb) throw new Error("Demo DB not loaded");
             const games = demoDb.prepare(`
@@ -229,7 +250,7 @@ function startWebhookServer(bot) {
         }
     });
 
-    app.get('/api/natcom/rewards-details', (req, res) => {
+    app.get('/api/natcom/rewards-details', requireAuth, (req, res) => {
         try {
             if (!demoDb) throw new Error("Demo DB not loaded");
             const scratch = demoDb.prepare("SELECT SUM(amount_htg) as sum FROM rewards WHERE reward_type = 'SCRATCH_CARD' AND status = 'PAID'").get().sum || 0;
@@ -241,7 +262,7 @@ function startWebhookServer(bot) {
         }
     });
 
-    app.get('/api/natcom/top-agents', (req, res) => {
+    app.get('/api/natcom/top-agents', requireAuth, (req, res) => {
         try {
             if (!demoDb) throw new Error("Demo DB not loaded");
             const topAgents = demoDb.prepare(`
@@ -260,7 +281,7 @@ function startWebhookServer(bot) {
         }
     });
 
-    app.get('/api/natcom/download-report', (req, res) => {
+    app.get('/api/natcom/download-report', requireAuth, (req, res) => {
         const zipPath = path.join(__dirname, '..', '..', 'data', 'natcom_demo_csv', 'tickets.csv');
         res.download(zipPath, 'tickets_report_2026.csv');
     });

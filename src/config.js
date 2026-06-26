@@ -3,6 +3,7 @@ require('dotenv').config();
 module.exports = {
     BOT_TOKEN: process.env.BOT_TOKEN,
     ADMIN_ID: parseInt(process.env.ADMIN_ID) || 0,
+    DASHBOARD_PASSWORD: process.env.DASHBOARD_PASSWORD || 'admin123',
 
     // Bank config for VietQR
     BANK: {
