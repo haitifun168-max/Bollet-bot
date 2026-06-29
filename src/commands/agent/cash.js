@@ -26,11 +26,11 @@ module.exports = (bot) => {
             const validation = await winCodeService.validateWinCode(cleanCode);
 
             if (!validation.isValid) {
-                // Dịch lỗi validation.reason bằng cách check key tương ứng hoặc dùng trực tiếp
                 let localizedReason = validation.reason;
-                if (validation.reason.includes('không tồn tại')) localizedReason = t('code_not_exist', lang);
-                else if (validation.reason.includes('đã được đổi')) localizedReason = t('code_redeemed', lang);
-                else if (validation.reason.includes('hết hạn')) localizedReason = t('code_expired', lang);
+                if (validation.reason === 'WIN_CODE_NOT_FOUND') localizedReason = t('code_not_exist', lang);
+                else if (validation.reason === 'WIN_CODE_ALREADY_REDEEMED') localizedReason = t('code_redeemed', lang);
+                else if (validation.reason === 'WIN_CODE_EXPIRED') localizedReason = t('code_expired', lang);
+                else if (validation.reason === 'INVALID_SIGNATURE') localizedReason = t('validation_error', lang);
 
                 return ctx.replyWithHTML(`❌ <b>${t('validation_error', lang)}</b> ${localizedReason}`);
             }

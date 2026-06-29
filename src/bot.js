@@ -16,7 +16,7 @@ bot.use(session());
 bot.catch((err, ctx) => {
     console.error(`❌ Error for ${ctx.updateType}:`, err.message);
     try {
-        ctx.reply('❌ Đã xảy ra lỗi. Vui lòng thử lại sau.');
+        ctx.reply('❌ Yon erè rive. Tanpri eseye ankò pita. (An error occurred. Please try again later.)');
     } catch (e) {
         // ignore
     }
@@ -47,20 +47,20 @@ require('./handlers/adminActions')(bot);
 
 // Set bot commands for menu
 bot.telegram.setMyCommands([
-    { command: 'start', description: '🔄 Bắt đầu / Khởi động lại' },
-    { command: 'menu', description: '👤 Thông tin tài khoản' },
-    { command: 'play', description: '🎟️ Mua vé số Borlette (Play)' },
-    { command: 'tchala', description: '📖 Tra cứu Sổ mơ Borlette (Tchala)' },
-    { command: 'nap', description: '💰 Nạp tiền Natcash' },
-    { command: 'checkpay', description: '🔍 Kiểm tra thanh toán' },
-    { command: 'support', description: '🆘 Hỗ trợ' },
-    { command: 'myid', description: '🆔 Lấy ID của bạn' },
-    { command: 'bilan', description: '📊 Bảng điều khiển Đại lý (Bilan)' },
-    { command: 'komisyon', description: '💰 Quản lý hoa hồng (Komisyon)' },
-    { command: 'cash', description: '💵 Rút tiền thưởng tại quầy (Cash)' },
-    { command: 'kliyan', description: '👥 Khách hàng giới thiệu (Kliyan)' },
-    { command: 'lyen', description: '🔗 Mã QR / Link giới thiệu (Lyen)' },
-    { command: 'leaderboard', description: '🏆 Bảng xếp hạng Đại lý (Leaderboard)' },
+    { command: 'start', description: '🔄 Rdemare / Restart Bot' },
+    { command: 'menu', description: '👤 Enfòmasyon Kont / Account Info' },
+    { command: 'play', description: '🎟️ Achte Tikè Borlette / Buy Ticket' },
+    { command: 'tchala', description: '📖 Liv Rèv Tchala / Dream Book' },
+    { command: 'nap', description: '💰 Depoze Natcash / Deposit Natcash' },
+    { command: 'checkpay', description: '🔍 Tcheke Peye / Check Payment' },
+    { command: 'support', description: '🆘 Sipò / Support' },
+    { command: 'myid', description: '🆔 Telegram ID mwen / Get Telegram ID' },
+    { command: 'bilan', description: '📊 Bilan Ajan / Agent Dashboard' },
+    { command: 'komisyon', description: '💰 Komisyon mwen / My Commissions' },
+    { command: 'cash', description: '💵 Peye Kliyan / Cash Out Winners' },
+    { command: 'kliyan', description: '👥 Kliyan mwen / My Referrals' },
+    { command: 'lyen', description: '🔗 Lyen Pwomosyon / Promotion Link' },
+    { command: 'leaderboard', description: '🏆 Klasman Ajan / Agent Leaderboard' },
 ]);
 
 

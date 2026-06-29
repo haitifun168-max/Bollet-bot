@@ -57,17 +57,17 @@ async function validateWinCode(code) {
     );
 
     if (res.rows.length === 0) {
-        return { isValid: false, reason: 'Mã rút tiền không tồn tại.' };
+        return { isValid: false, reason: 'WIN_CODE_NOT_FOUND' };
     }
 
     const winCode = res.rows[0];
 
     if (winCode.is_redeemed) {
-        return { isValid: false, reason: 'Mã rút tiền này đã được đổi trước đó.' };
+        return { isValid: false, reason: 'WIN_CODE_ALREADY_REDEEMED' };
     }
 
     if (new Date() > new Date(winCode.expires_at)) {
-        return { isValid: false, reason: 'Mã rút tiền đã hết hạn (TTL 48h).' };
+        return { isValid: false, reason: 'WIN_CODE_EXPIRED' };
     }
 
     // Xác thực lại chữ ký HMAC nội bộ để tránh tamper dữ liệu
@@ -77,7 +77,7 @@ async function validateWinCode(code) {
     const expectedSignature = hmac.digest('hex');
 
     if (winCode.hmac_signature !== expectedSignature) {
-        return { isValid: false, reason: 'Chữ ký bảo mật mã xác nhận không hợp lệ.' };
+        return { isValid: false, reason: 'INVALID_SIGNATURE' };
     }
 
     return {

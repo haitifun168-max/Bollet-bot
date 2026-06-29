@@ -9,9 +9,9 @@ function productListKeyboard(products) {
         let label = `${p.emoji} ${p.name} - ${formatPrice(p.price)}`;
 
         if (p.contact_only && stock === 0) {
-            label += ` — 📬 Liên hệ`;
+            label += ` — 📬 Support/Contact`;
         } else {
-            label += ` (Còn: ${stock})`;
+            label += ` (Stock: ${stock})`;
         }
 
         if (p.promotion) {
@@ -21,7 +21,7 @@ function productListKeyboard(products) {
         return [Markup.button.callback(label, `product_${p.id}`)];
     });
 
-    buttons.push([Markup.button.callback('🔄 Làm mới', 'refresh_products')]);
+    buttons.push([Markup.button.callback('🔄 Refresh', 'refresh_products')]);
 
     return Markup.inlineKeyboard(buttons);
 }
@@ -43,7 +43,7 @@ function quantityKeyboard(productId, maxQty = 10) {
     }
     if (row.length > 0) rows.push(row);
 
-    rows.push([Markup.button.callback('❌ Hủy', 'cancel_order')]);
+    rows.push([Markup.button.callback('❌ Cancel', 'cancel_order')]);
 
     return Markup.inlineKeyboard(rows);
 }
@@ -53,8 +53,8 @@ function quantityKeyboard(productId, maxQty = 10) {
  */
 function orderConfirmKeyboard(orderId) {
     return Markup.inlineKeyboard([
-        [Markup.button.callback('✅ Đã thanh toán', `check_paid_${orderId}`)],
-        [Markup.button.callback('❌ Hủy đơn', `cancel_order_${orderId}`)],
+        [Markup.button.callback('✅ Paid', `check_paid_${orderId}`)],
+        [Markup.button.callback('❌ Cancel Order', `cancel_order_${orderId}`)],
     ]);
 }
 
@@ -64,18 +64,18 @@ function orderConfirmKeyboard(orderId) {
 function postDeliveryKeyboard() {
     return Markup.inlineKeyboard([
         [
-            Markup.button.callback('📊 Data chính', 'data_main'),
-            Markup.button.callback('🔄 Mua lại', 'buy_again'),
+            Markup.button.callback('📊 Main Data', 'data_main'),
+            Markup.button.callback('🔄 Buy Again', 'buy_again'),
         ],
-        [Markup.button.callback('📋 Quay lại danh sách', 'refresh_products')],
+        [Markup.button.callback('📋 Back to List', 'refresh_products')],
     ]);
 }
 
 /**
- * Format price in VND
+ * Format price in HTG
  */
 function formatPrice(amount) {
-    return new Intl.NumberFormat('vi-VN').format(amount) + 'đ';
+    return new Intl.NumberFormat('en-US').format(amount) + ' HTG';
 }
 
 /**
@@ -83,9 +83,9 @@ function formatPrice(amount) {
  */
 function mainMenuKeyboard() {
     return Markup.keyboard([
-        ['📦 Sản phẩm', '💰 Nạp tiền'],
-        ['🔍 Kiểm tra thanh toán', '👤 Tài khoản'],
-        ['🆘 Hỗ trợ'],
+        ['🎟️ Play Borlette', '💰 Deposit Natcash'],
+        ['🔍 Check Payment', '👤 Profile'],
+        ['🆘 Support'],
     ]).resize();
 }
 

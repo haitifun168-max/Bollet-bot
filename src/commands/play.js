@@ -2,19 +2,25 @@
 const db = require('../database/index');
 const qrcode = require('qrcode');
 const tchalaService = require('../services/tchalaService');
+const sessionService = require('../services/sessionService');
+const betService = require('../services/betService');
 const { Markup } = require('telegraf');
 
 module.exports = (bot) => {
     // 1. Màn hình chọn game + Lựa chọn Sổ mơ / Tử vi
     const sendGameSelection = async (ctx) => {
-        ctx.session = ctx.session || {};
-        ctx.session.cart = ctx.session.cart || [];
-        ctx.session.bet = null; // Reset trạng thái cược đơn hiện tại
+        const session = await sessionService.getSession(ctx.from.id, 'TELEGRAM');
+        // Reset trạng thái cược đơn hiện tại nhưng giữ nguyên giỏ hàng
+        await sessionService.updateSession(ctx.from.id, { 
+            step: 'IDLE',
+            game_type: null,
+            numbers: null
+        }, 'TELEGRAM');
 
         let cartSummary = '';
-        if (ctx.session.cart.length > 0) {
-            cartSummary = `🛒 <b>Panyen ou (Your Cart - ${ctx.session.cart.length} tickets):</b>\n`;
-            ctx.session.cart.forEach((item, index) => {
+        if (session.cart && session.cart.length > 0) {
+            cartSummary = `🛒 <b>Panyen ou (Your Cart - ${session.cart.length} tickets):</b>\n`;
+            session.cart.forEach((item, index) => {
                 cartSummary += `├ ${index + 1}. <b>${item.gameType.replace('_', ' ')}</b>: <code>${item.numbers}</code> (${item.amount} HTG)\n`;
             });
             cartSummary += `━━━━━━━━━━━━━━━━━━\n\n`;
@@ -30,10 +36,10 @@ Chwazi kalite jwèt ou vle jwe a oswa chèche nimewo chans:
             [Markup.button.callback('1️⃣ Bolet 2 (Win 50x)', 'play_BOLET_2')],
             [Markup.button.callback('2️⃣ Lotto 3 (Win 500x)', 'play_LOTTO3')],
             [Markup.button.callback('3️⃣ Maryaj (Win 1000x)', 'play_MARYAJ')],
-            [Markup.button.callback('📖 Sổ mơ Tchala (Dream Book)', 'open_tchala'), Markup.button.callback('⭐ Zodiak (Zodiac Sign)', 'open_zodiac')]
+            [Markup.button.callback('📖 Tchala (Dream Book)', 'open_tchala'), Markup.button.callback('⭐ Zodiak (Zodiac Sign)', 'open_zodiac')]
         ];
 
-        if (ctx.session.cart.length > 0) {
+        if (session.cart && session.cart.length > 0) {
             keyboardButtons.push([Markup.button.callback('💳 Peye Panyen an (Checkout Cart)', 'checkout_cart')]);
         }
 
@@ -47,12 +53,11 @@ Chwazi kalite jwèt ou vle jwe a oswa chèche nimewo chans:
     const handleGameClick = (gameType, sampleNum) => async (ctx) => {
         try {
             ctx.answerCbQuery();
-            ctx.session = ctx.session || {};
-            
-            ctx.session.bet = {
-                gameType,
-                step: 'WAITING_FOR_NUMBER'
-            };
+            await sessionService.updateSession(ctx.from.id, {
+                game_type: gameType,
+                step: 'WAITING_FOR_NUMBER',
+                numbers: null
+            }, 'TELEGRAM');
 
             const promptText = 
 `🔢 <b>Jwèt: ${gameType.replace('_', ' ')}</b>
@@ -76,13 +81,13 @@ Voye nimewo ou chwazi a nan chat la (e.g. <code>${sampleNum}</code>) oswa klike 
     // 3. Xử lý Sinh số Ngẫu nhiên (Lucky Pick)
     bot.action('lucky_pick_number', async (ctx) => {
         ctx.answerCbQuery();
-        ctx.session = ctx.session || {};
+        const session = await sessionService.getSession(ctx.from.id, 'TELEGRAM');
 
-        if (!ctx.session.bet || ctx.session.bet.step !== 'WAITING_FOR_NUMBER') {
+        if (session.step !== 'WAITING_FOR_NUMBER') {
             return ctx.reply('❌ Sesyon an ekspire. Tanpri kòmanse ankò ak /play.');
         }
 
-        const gameType = ctx.session.bet.gameType;
+        const gameType = session.game_type;
         let numbers = '';
 
         if (gameType === 'BOLET_2') {
@@ -95,22 +100,23 @@ Voye nimewo ou chwazi a nan chat la (e.g. <code>${sampleNum}</code>) oswa klike 
             numbers = `${num1}x${num2}`;
         }
 
-        ctx.session.bet.numbers = numbers;
-        ctx.session.bet.step = 'WAITING_FOR_AMOUNT';
+        await sessionService.updateSession(ctx.from.id, {
+            numbers: numbers,
+            step: 'WAITING_FOR_AMOUNT'
+        }, 'TELEGRAM');
 
         askForAmount(ctx, numbers, gameType);
     });
 
     // 4. Xử lý chọn Sổ mơ Tchala
-    bot.action('open_tchala', (ctx) => {
+    bot.action('open_tchala', async (ctx) => {
         ctx.answerCbQuery();
-        ctx.session = ctx.session || {};
-        ctx.session.bet = {
+        await sessionService.updateSession(ctx.from.id, {
             step: 'WAITING_FOR_DREAM'
-        };
+        }, 'TELEGRAM');
 
         ctx.replyWithHTML(
-            `📖 <b>SỔ MƠ TCHALA (Haitian Dream Dictionary)</b>\n` +
+            `📖 <b>TCHALA (Haitian Dream Dictionary)</b>\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `Kisa ou te reve jodi a? Voye mo a nan chat la (e.g. <i>chat, dife, dlo, lajan, maryaj</i>):\n` +
             `<i>(What did you dream about? Send the keyword in chat, e.g. cat, fire, water, money):</i>`
@@ -121,7 +127,7 @@ Voye nimewo ou chwazi a nan chat la (e.g. <code>${sampleNum}</code>) oswa klike 
     bot.action('open_zodiac', (ctx) => {
         ctx.answerCbQuery();
         ctx.replyWithHTML(
-            `⭐ <b>CUNG HOÀNG ĐẠO (Zodiac Lucky Pick)</b>\n` +
+            `⭐ <b>ZODIAK (Zodiac Lucky Pick)</b>\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `Chwazi siy zodiak ou a pou jwenn nimewo chans ou:\n` +
             `<i>(Select your zodiac sign to get your lucky numbers):</i>`,
@@ -139,19 +145,18 @@ Voye nimewo ou chwazi a nan chat la (e.g. <code>${sampleNum}</code>) oswa klike 
     // Xử lý click chọn Cung Hoàng đạo
     bot.action(/^zod_([\wèòàèìùỳ]+)$/, async (ctx) => {
         ctx.answerCbQuery();
-        ctx.session = ctx.session || {};
         const signKey = ctx.match[1];
         
         const zodiac = tchalaService.getZodiacNumbers(signKey);
         if (!zodiac) {
-            return ctx.reply('❌ Cung hoàng đạo không hợp lệ.');
+            return ctx.reply('❌ Zodiak sa a pa valab. / Invalid zodiac sign.');
         }
 
-        ctx.session.bet = {
-            gameType: 'BOLET_2',
+        await sessionService.updateSession(ctx.from.id, {
+            game_type: 'BOLET_2',
             step: 'WAITING_FOR_DREAM_NUMBER_SELECTION',
-            suggestedNumbers: zodiac.numbers
-        };
+            suggested_numbers: zodiac.numbers
+        }, 'TELEGRAM');
 
         const message = 
 `⭐ <b>Zodiak: ${zodiac.name}</b>\n` +
@@ -170,37 +175,44 @@ Voye nimewo ou chwazi a nan chat la (e.g. <code>${sampleNum}</code>) oswa klike 
     });
 
     // Xử lý click chọn số may mắn gợi ý từ Tchala hoặc Zodiac
-    bot.action(/^bet_suggested_num_(\d+)$/, (ctx) => {
+    bot.action(/^bet_suggested_num_(\d+)$/, async (ctx) => {
         ctx.answerCbQuery();
-        ctx.session = ctx.session || {};
+        const session = await sessionService.getSession(ctx.from.id, 'TELEGRAM');
 
-        if (!ctx.session.bet) {
+        if (session.step !== 'WAITING_FOR_DREAM_NUMBER_SELECTION') {
             return ctx.reply('❌ Sesyon an ekspire. Tanpri kòmanse ankò ak /play.');
         }
 
         const numbers = ctx.match[1];
-        ctx.session.bet.numbers = numbers;
-        ctx.session.bet.numbersBatch = null;
-        ctx.session.bet.step = 'WAITING_FOR_AMOUNT';
+        await sessionService.updateSession(ctx.from.id, {
+            numbers: numbers,
+            suggested_numbers: null,
+            step: 'WAITING_FOR_AMOUNT'
+        }, 'TELEGRAM');
 
-        askForAmount(ctx, numbers, ctx.session.bet.gameType);
+        askForAmount(ctx, numbers, session.game_type);
     });
 
     // Xử lý click chọn TẤT CẢ số may mắn gợi ý
-    bot.action('bet_suggested_all', (ctx) => {
+    bot.action('bet_suggested_all', async (ctx) => {
         ctx.answerCbQuery();
-        ctx.session = ctx.session || {};
+        const session = await sessionService.getSession(ctx.from.id, 'TELEGRAM');
 
-        if (!ctx.session.bet || !ctx.session.bet.suggestedNumbers) {
+        if (!session.suggested_numbers) {
             return ctx.reply('❌ Sesyon an ekspire. Tanpri kòmanse ankò ak /play.');
         }
 
-        const numbersBatch = ctx.session.bet.suggestedNumbers;
-        ctx.session.bet.numbers = null;
-        ctx.session.bet.numbersBatch = numbersBatch;
-        ctx.session.bet.step = 'WAITING_FOR_AMOUNT';
+        const suggestedList = typeof session.suggested_numbers === 'string' 
+            ? session.suggested_numbers.split(',') 
+            : session.suggested_numbers;
 
-        askForAmount(ctx, numbersBatch.join(', '), ctx.session.bet.gameType);
+        await sessionService.updateSession(ctx.from.id, {
+            numbers: suggestedList.join(','),
+            suggested_numbers: null,
+            step: 'WAITING_FOR_AMOUNT'
+        }, 'TELEGRAM');
+
+        askForAmount(ctx, suggestedList.join(', '), session.game_type);
     });
 
     // Hàm phụ hiển thị lựa chọn tiền cược
@@ -209,7 +221,7 @@ Voye nimewo ou chwazi a nan chat la (e.g. <code>${sampleNum}</code>) oswa klike 
 `💵 <b>KANTITE LAJAN POU PARYE (Bet Amount)</b>
 ━━━━━━━━━━━━━━━━━━
 Nimewo chwazi: <b>${numbers}</b> (${gameType.replace('_', ' ')})
-
+ 
 Chwazi kantite lajan ou vle mete sou tikè sa a:
 <i>(Select the amount of money you want to bet):</i>`;
 
@@ -222,39 +234,24 @@ Chwazi kantite lajan ou vle mete sou tikè sa a:
     // 6. Click chọn số tiền cược nhanh -> Đưa vào giỏ hàng
     bot.action(/^bet_amount_(\d+)$/, async (ctx) => {
         ctx.answerCbQuery();
-        ctx.session = ctx.session || {};
+        const session = await sessionService.getSession(ctx.from.id, 'TELEGRAM');
 
-        if (!ctx.session.bet || ctx.session.bet.step !== 'WAITING_FOR_AMOUNT') {
+        if (session.step !== 'WAITING_FOR_AMOUNT') {
             return ctx.reply('❌ Sesyon an ekspire. Tanpri kòmanse ankò ak /play.');
         }
 
         const amount = parseInt(ctx.match[1]);
-        ctx.session.bet.amount = amount;
         
-        ctx.session.cart = ctx.session.cart || [];
-        
-        let addedNumbersText = '';
-        let totalCost = 0;
-        
-        if (ctx.session.bet.numbersBatch && ctx.session.bet.numbersBatch.length > 0) {
-            for (const num of ctx.session.bet.numbersBatch) {
-                ctx.session.cart.push({
-                    gameType: ctx.session.bet.gameType,
-                    numbers: num,
-                    amount: amount
-                });
-            }
-            addedNumbersText = ctx.session.bet.numbersBatch.join(', ');
-            totalCost = amount * ctx.session.bet.numbersBatch.length;
-        } else {
-            ctx.session.cart.push({
-                gameType: ctx.session.bet.gameType,
-                numbers: ctx.session.bet.numbers,
-                amount: amount
-            });
-            addedNumbersText = ctx.session.bet.numbers;
-            totalCost = amount;
+        let numbersList = [];
+        if (session.numbers && session.numbers.includes(',')) {
+            numbersList = session.numbers.split(',');
+        } else if (session.numbers) {
+            numbersList = [session.numbers];
         }
+
+        const updatedCart = betService.addToCart(session.cart, numbersList, session.game_type, amount);
+        const addedNumbersText = numbersList.join(', ');
+        const totalCost = amount * numbersList.length;
 
         const addedMsg = 
 `✅ <b>Tikè te ajoute nan panyen an! (Ticket added to cart!)</b>
@@ -264,7 +261,12 @@ Chwazi kantite lajan ou vle mete sou tikè sa a:
 Kisa ou vle fè kounye a?
 <i>(What do you want to do now?):</i>`;
 
-        ctx.session.bet = null;
+        await sessionService.updateSession(ctx.from.id, {
+            cart: updatedCart,
+            step: 'IDLE',
+            game_type: null,
+            numbers: null
+        }, 'TELEGRAM');
 
         ctx.replyWithHTML(addedMsg, Markup.inlineKeyboard([
             [Markup.button.callback('➕ Achte yon lòt nimewo (Add ticket)', 'add_more_tickets')],
@@ -272,69 +274,24 @@ Kisa ou vle fè kounye a?
         ]));
     });
 
-    bot.action('add_more_tickets', (ctx) => {
+    bot.action('add_more_tickets', async (ctx) => {
         ctx.answerCbQuery();
-        sendGameSelection(ctx);
+        await sendGameSelection(ctx);
     });
 
     // 7. Thanh toán Giỏ hàng (Checkout Cart)
     bot.action('checkout_cart', async (ctx) => {
         ctx.answerCbQuery();
-        ctx.session = ctx.session || {};
-        const cart = ctx.session.cart || [];
+        const session = await sessionService.getSession(ctx.from.id, 'TELEGRAM');
+        const cart = session.cart || [];
 
         if (cart.length === 0) {
             return ctx.reply('❌ Panyen ou vid. Tanpri kòmanse ak /play.');
         }
 
         try {
-            const attrRes = await db.query(
-                `SELECT agent_id FROM user_agent_attribution WHERE user_id = $1 LIMIT 1`,
-                [ctx.from.id]
-            );
-            
-            let agentId = null;
-            if (attrRes.rows.length > 0) {
-                agentId = attrRes.rows[0].agent_id;
-            } else {
-                const defaultAgentRes = await db.query('SELECT id FROM agents LIMIT 1');
-                if (defaultAgentRes.rows.length > 0) {
-                    agentId = defaultAgentRes.rows[0].id;
-                }
-            }
-
-            let drawRes = await db.query(
-                `SELECT id FROM draws WHERE draw_date = CURRENT_DATE AND status = 'OPEN' LIMIT 1`
-            );
-            let drawId;
-            if (drawRes.rows.length === 0) {
-                const newDraw = await db.query(
-                    `INSERT INTO draws (draw_date, draw_time, game_type, status)
-                     VALUES (CURRENT_DATE, '18:00:00', $1, 'OPEN')
-                     RETURNING id`,
-                    [cart[0].gameType]
-                );
-                drawId = newDraw.rows[0].id;
-            } else {
-                drawId = drawRes.rows[0].id;
-            }
-
-            const paymentRef = `PAY${Math.floor(100000 + Math.random() * 900000)}`;
-            let totalAmount = 0;
-            let ticketsSummary = '';
-
-            for (const item of cart) {
-                await db.query(
-                    `INSERT INTO tickets (user_id, agent_id, draw_id, game_type, numbers, amount_htg, payment_ref, status)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')`,
-                    [ctx.from.id, agentId, drawId, item.gameType, item.numbers, item.amount, paymentRef]
-                );
-                totalAmount += item.amount;
-                ticketsSummary += `├ 🎟️ <b>${item.gameType.replace('_', ' ')}</b>: <code>${item.numbers}</code> (${item.amount} HTG)\n`;
-            }
-
-            const simUrl = `http://localhost:3000/demo/natcash`;
-            const prefilledSimUrl = `${simUrl}?ref=${paymentRef}&amount=${totalAmount}`;
+            const { paymentRef, totalAmount, ticketsSummary, prefilledSimUrl } = 
+                await betService.checkout(ctx.from.id, 'TELEGRAM', cart);
 
             const qrBuffer = await qrcode.toBuffer(prefilledSimUrl, {
                 errorCorrectionLevel: 'M',
@@ -351,7 +308,7 @@ Kisa ou vle fè kounye a?
 ${ticketsSummary}
 💵 <b>TOTAL KÒN: ${totalAmount.toLocaleString()} HTG</b>
 🔑 Ref: <code>${paymentRef}</code>
-
+ 
 📱 <b>PAYMENT METHOD - NATCASH:</b>
 1. Scan QR Code to trigger payment.
 2. Or click the link below to simulate Natcash payment:
@@ -365,20 +322,21 @@ ${ticketsSummary}
                 }
             );
 
-            ctx.session.cart = [];
+            await sessionService.clearSession(ctx.from.id);
 
         } catch (err) {
             console.error('Lỗi khi thanh toán giỏ hàng:', err);
-            ctx.reply('❌ Error checkout cart.');
+            ctx.reply('❌ Error checkout cart: ' + err.message);
         }
     });
 
     // Lệnh riêng cho /tchala đề phòng người chơi gõ thẳng
-    bot.command('tchala', (ctx) => {
-        ctx.session = ctx.session || {};
-        ctx.session.bet = { step: 'WAITING_FOR_DREAM' };
+    bot.command('tchala', async (ctx) => {
+        await sessionService.updateSession(ctx.from.id, {
+            step: 'WAITING_FOR_DREAM'
+        }, 'TELEGRAM');
         ctx.replyWithHTML(
-            `📖 <b>SỔ MƠ TCHALA (Dream Dictionary)</b>\n` +
+            `📖 <b>TCHALA (Dream Dictionary)</b>\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `Kisa ou te reve? Voye mo a nan chat la (e.g. <i>chat, dife, dlo, lajan, maryaj</i>):`
         );
@@ -386,14 +344,14 @@ ${ticketsSummary}
 
     // 8. Bắt tin nhắn text của người dùng để xử lý Sổ mơ Tchala & Gõ số cược thủ công
     bot.on('text', async (ctx, next) => {
-        ctx.session = ctx.session || {};
+        const session = await sessionService.getSession(ctx.from.id, 'TELEGRAM');
         
-        if (!ctx.session.bet) {
+        if (session.step === 'IDLE' || !session.step) {
             return next();
         }
 
         // Xử lý bước tra sổ mơ
-        if (ctx.session.bet.step === 'WAITING_FOR_DREAM') {
+        if (session.step === 'WAITING_FOR_DREAM') {
             const keyword = ctx.message.text.trim();
             const result = await tchalaService.lookupDream(keyword);
 
@@ -405,11 +363,11 @@ ${ticketsSummary}
             }
 
             // Gợi ý cược các số từ giấc mơ tra được
-            ctx.session.bet = {
-                gameType: 'BOLET_2',
+            await sessionService.updateSession(ctx.from.id, {
+                game_type: 'BOLET_2',
                 step: 'WAITING_FOR_DREAM_NUMBER_SELECTION',
-                suggestedNumbers: result.numbers
-            };
+                suggested_numbers: result.numbers
+            }, 'TELEGRAM');
 
             const message = 
 `📖 <b>Tchala: ${result.keyword.toUpperCase()}</b>\n` +
@@ -428,53 +386,37 @@ ${ticketsSummary}
         }
 
         // Xử lý bước nhập số cược thông thường
-        if (ctx.session.bet.step === 'WAITING_FOR_NUMBER') {
+        if (session.step === 'WAITING_FOR_NUMBER') {
             const rawInput = ctx.message.text.trim();
-            const gameType = ctx.session.bet.gameType;
+            const gameType = session.game_type;
 
-            // Split raw input by spaces, commas, or semicolons
-            const parsedNumbers = rawInput
-                .split(/[\s,;]+/)
-                .map(num => num.trim())
-                .filter(num => num.length > 0);
+            const validation = betService.validateNumbers(rawInput, gameType);
 
-            if (parsedNumbers.length === 0) {
+            if (!validation.isValid || validation.numbers.length === 0) {
+                if (gameType === 'BOLET_2') {
+                    return ctx.reply(`❌ Nimewo sa yo pa valid (Bolet 2 dwe gen ekzakteman 2 chif, e.g. 24): ${validation.invalidNumbers.join(', ')}. Re-voye:`);
+                }
+                if (gameType === 'LOTTO3') {
+                    return ctx.reply(`❌ Nimewo sa yo pa valid (Lotto 3 dwe gen ekzakteman 3 chif, e.g. 123): ${validation.invalidNumbers.join(', ')}. Re-voye:`);
+                }
+                if (gameType === 'MARYAJ') {
+                    return ctx.reply(`❌ Nimewo sa yo pa valid (Maryaj dwe gen fòma: [2 chif]x[2 chif], e.g. 12x34): ${validation.invalidNumbers.join(', ')}. Re-voye:`);
+                }
                 return ctx.reply('❌ Nimewo pa valid. Re-voye nimewo a:');
             }
 
-            // Validate each number
-            const invalidNumbers = [];
-            for (const num of parsedNumbers) {
-                if (gameType === 'BOLET_2' && !/^\d{2}$/.test(num)) {
-                    invalidNumbers.push(num);
-                } else if (gameType === 'LOTTO3' && !/^\d{3}$/.test(num)) {
-                    invalidNumbers.push(num);
-                } else if (gameType === 'MARYAJ' && !/^\d{2}x\d{2}$/i.test(num)) {
-                    invalidNumbers.push(num);
-                }
-            }
-
-            if (invalidNumbers.length > 0) {
-                if (gameType === 'BOLET_2') {
-                    return ctx.reply(`❌ Nimewo sa yo pa valid (Bolet 2 dwe gen ekzakteman 2 chif, e.g. 24): ${invalidNumbers.join(', ')}. Re-voye:`);
-                }
-                if (gameType === 'LOTTO3') {
-                    return ctx.reply(`❌ Nimewo sa yo pa valid (Lotto 3 dwe gen ekzakteman 3 chif, e.g. 123): ${invalidNumbers.join(', ')}. Re-voye:`);
-                }
-                if (gameType === 'MARYAJ') {
-                    return ctx.reply(`❌ Nimewo sa yo pa valid (Maryaj dwe gen fòma: [2 chif]x[2 chif], e.g. 12x34): ${invalidNumbers.join(', ')}. Re-voye:`);
-                }
-            }
-
+            const parsedNumbers = validation.numbers;
             if (parsedNumbers.length === 1) {
-                ctx.session.bet.numbers = parsedNumbers[0];
-                ctx.session.bet.numbersBatch = null;
-                ctx.session.bet.step = 'WAITING_FOR_AMOUNT';
+                await sessionService.updateSession(ctx.from.id, {
+                    numbers: parsedNumbers[0],
+                    step: 'WAITING_FOR_AMOUNT'
+                }, 'TELEGRAM');
                 askForAmount(ctx, parsedNumbers[0], gameType);
             } else {
-                ctx.session.bet.numbers = null;
-                ctx.session.bet.numbersBatch = parsedNumbers;
-                ctx.session.bet.step = 'WAITING_FOR_AMOUNT';
+                await sessionService.updateSession(ctx.from.id, {
+                    numbers: parsedNumbers.join(','),
+                    step: 'WAITING_FOR_AMOUNT'
+                }, 'TELEGRAM');
                 askForAmount(ctx, parsedNumbers.join(', '), gameType);
             }
             return;

@@ -11,26 +11,26 @@ module.exports = (bot) => {
         const product = productService.getById(productId);
 
         if (!product) {
-            return ctx.answerCbQuery('❌ Sản phẩm không tồn tại');
+            return ctx.answerCbQuery('❌ Item does not exist');
         }
 
         ctx.answerCbQuery();
 
-        // Contact-only products → show contact info + Zalo link
+        // Contact-only products → show contact info
         if (product.contact_only) {
             const buttons = [];
 
-            // Button 1: Liên hệ mua qua Telegram admin
+            // Button 1: Contact support via Telegram
             const adminUsername = config.SUPPORT_CONTACT.replace('@', '');
-            buttons.push([Markup.button.url('💬 Liên hệ mua', `https://t.me/${adminUsername}`)]);
+            buttons.push([Markup.button.url('💬 Contact Support', `https://t.me/${adminUsername}`)]);
 
-            // Button 2: Tham gia nhóm Zalo (from sheet contact_url)
+            // Button 2: Join support link
             if (product.contact_url) {
-                buttons.push([Markup.button.url('📱 Hotline Zalo 24/7', product.contact_url)]);
+                buttons.push([Markup.button.url('📱 Support Hotline 24/7', product.contact_url)]);
             }
 
             // Back to product list
-            buttons.push([Markup.button.callback('↩️ Quay lại', 'refresh_products')]);
+            buttons.push([Markup.button.callback('↩️ Back', 'refresh_products')]);
 
             return ctx.replyWithHTML(
                 messages.contactOnly(product),

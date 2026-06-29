@@ -21,7 +21,7 @@ module.exports = (bot) => {
                 );
             }
 
-            let text = `🔍 <b>TIKÈ GÒN ĐÂY / RECENT TICKETS</b>\n━━━━━━━━━━━━━━━━━━\n\n`;
+            let text = `🔍 <b>DÈNYE TIKÈ YO / RECENT TICKETS</b>\n━━━━━━━━━━━━━━━━━━\n\n`;
             
             res.rows.forEach((row, i) => {
                 const statusEmoji = row.status === 'PAID' ? '🟢 PAID' : '⏳ PENDING';
@@ -35,7 +35,7 @@ module.exports = (bot) => {
                 text += `${i + 1}. 🎟️ <b>${row.game_type}</b> (<code>${row.numbers}</code>)\n` +
                         `├ 💵 Lajan: <b>${parseInt(row.amount_htg).toLocaleString()} HTG</b>\n` +
                         `├ 🔑 Ref: <code>${row.payment_ref}</code>\n` +
-                        `├ Trạng thái: ${statusEmoji}${winStatus}\n` +
+                        `├ Eta / Status: ${statusEmoji}${winStatus}\n` +
                         `└ Lè: ${new Date(row.created_at).toLocaleString()}\n\n`;
             });
 

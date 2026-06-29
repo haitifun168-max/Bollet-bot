@@ -348,9 +348,9 @@ function startWebhookServer(bot) {
                             
                             // Notify admin about failed auto-delivery due to stock
                             await bot.telegram.sendMessage(config.ADMIN_ID, 
-                                `⚠️ <b>LỖI GIAO HÀNG TỰ ĐỘNG</b>\n` +
-                                `Đơn hàng <b>#${order.id}</b> đã thanh toán thành công qua Webhook nhưng không thể giao tự động: <i>${result.error}</i>\n` +
-                                `Admin vui lòng giao hàng thủ công.`
+                                `⚠️ <b>AUTO-DELIVERY ERROR</b>\n` +
+                                `Order <b>#${order.id}</b> paid successfully via Webhook but could not be delivered automatically: <i>${result.error}</i>\n` +
+                                `Admin: Please perform manual delivery.`
                             , { parse_mode: 'HTML' });
                             
                             return res.json({ success: false, error: result.error });
@@ -415,6 +415,51 @@ function startWebhookServer(bot) {
         } catch (err) {
             console.error('❌ Webhook error:', err.message);
             return res.status(500).json({ error: 'Internal Server Error' });
+        }
+    });
+
+    // WhatsApp Meta Webhook Verification
+    app.get('/webhook', (req, res) => {
+        const mode = req.query['hub.mode'];
+        const token = req.query['hub.verify_token'];
+        const challenge = req.query['hub.challenge'];
+
+        const localVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN || 'NatlotoVerifyToken2026';
+
+        if (mode && token) {
+            if (mode === 'subscribe' && token === localVerifyToken) {
+                console.log('✅ Webhook verified successfully with Meta!');
+                return res.status(200).send(challenge);
+            } else {
+                console.warn('⚠️ Webhook verification failed. Token mismatch.');
+                return res.sendStatus(403);
+            }
+        }
+        return res.sendStatus(400);
+    });
+
+    // WhatsApp Meta Webhook Event Handler
+    app.post('/webhook', async (req, res) => {
+        const body = req.body;
+
+        if (body.object === 'whatsapp_business_account') {
+            try {
+                const entry = body.entry?.[0];
+                const changes = entry?.changes?.[0];
+                const value = changes?.value;
+                const message = value?.messages?.[0];
+
+                if (message) {
+                    console.log(`✉️ Nhận tin nhắn WhatsApp từ ${message.from}: ${message.type === 'text' ? message.text.body : message.type}`);
+                    const whatsappTransport = require('../transports/whatsappTransport');
+                    await whatsappTransport.handleIncomingMessage(message);
+                }
+            } catch (err) {
+                console.error('❌ Lỗi xử lý webhook WhatsApp:', err.message);
+            }
+            return res.status(200).send('EVENT_RECEIVED');
+        } else {
+            return res.sendStatus(404);
         }
     });
 

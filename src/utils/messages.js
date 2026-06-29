@@ -15,8 +15,8 @@ const messages = {
         `👉 <b>/myid</b> — 🆔 Lè kòd ID Telegram ou / Get Telegram ID\n\n` +
         `👉 <b>Agent Commands:</b>\n` +
         `📊 <b>/bilan</b> — Dashboard Marchann\n` +
-        `💰 <b>/komisyon</b> — Hoa hồng / Commission\n` +
-        `💵 <b>/cash</b> — Trả thưởng / Cash redemption`,
+        `💰 <b>/komisyon</b> — Komisyon / Commission\n` +
+        `💵 <b>/cash</b> — Peye Kliyan / Cash redemption`,
 
     accountInfo: (user, ticketsCount = 0) =>
         `👤 <b>Enfòmasyon sou Kont ou (Account Info)</b>\n` +

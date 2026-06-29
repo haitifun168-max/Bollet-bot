@@ -13,7 +13,7 @@ module.exports = (bot) => {
         if (startPayload && startPayload.startsWith('MA')) {
             try {
                 const agentId = await agentService.attributeUserToAgent(ctx.from.id, startPayload, 'QR_SCAN');
-                attributionText = `\n\n📌 <i>Bạn đã được liên kết thành công với Đại lý có mã: <b>${startPayload}</b></i>`;
+                attributionText = `\n\n📌 <i>Ou asosye avèk siksè ak Ajan: <b>${startPayload}</b> / You have been successfully linked to Agent: <b>${startPayload}</b></i>`;
             } catch (err) {
                 console.error('Lỗi gán attribution khi Start:', err.message);
             }
