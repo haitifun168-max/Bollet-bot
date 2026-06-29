@@ -11,6 +11,7 @@ const pool = new Pool({
     connectionString: config.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
     max: 10,
+    min: 2,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 15000,
 });
